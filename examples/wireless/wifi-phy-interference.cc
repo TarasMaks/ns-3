@@ -75,10 +75,10 @@
 #include "ns3/log.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
-#include "ns3/ssid.h"
-#include "ns3/string.h"
 #include "ns3/multi-model-spectrum-channel.h"
 #include "ns3/spectrum-wifi-helper.h"
+#include "ns3/ssid.h"
+#include "ns3/string.h"
 
 using namespace ns3;
 
@@ -196,7 +196,8 @@ main(int argc, char* argv[])
 
     Ptr<MultiModelSpectrumChannel> spectrumChannel = CreateObject<MultiModelSpectrumChannel>();
     spectrumChannel->SetPropagationDelayModel(CreateObject<ConstantSpeedPropagationDelayModel>());
-    Ptr<LogDistancePropagationLossModel> lossModel = CreateObject<LogDistancePropagationLossModel>();
+    Ptr<LogDistancePropagationLossModel> lossModel =
+        CreateObject<LogDistancePropagationLossModel>();
     spectrumChannel->AddPropagationLossModel(lossModel);
     wifiPhy.SetChannel(spectrumChannel);
     wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");

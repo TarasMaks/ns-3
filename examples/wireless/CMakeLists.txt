@@ -214,6 +214,13 @@ build_example(
 )
 
 build_example(
+  NAME wifi-phy-interference
+  SOURCE_FILES wifi-phy-interference.cc
+  LIBRARIES_TO_LINK ${libinternet}
+                    ${libwifi}
+)
+
+build_example(
   NAME wifi-sleep
   SOURCE_FILES wifi-sleep.cc
   LIBRARIES_TO_LINK ${libwifi}

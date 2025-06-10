@@ -778,6 +778,11 @@ SpectrumWifiPhy::GetBandForInterface(Ptr<WifiSpectrumPhyInterface> spectrumPhyIn
         {
             startIndex += numBandsBetweenSegments;
         }
+        if (startIndex >= totalNumBands / 2)
+        {
+            // step past DC
+            startIndex += 1;
+        }
         auto stopIndex = startIndex + numBandsInBand - 1;
         auto frequencies =
             ConvertIndicesToFrequenciesForInterface(spectrumPhyInterface, {startIndex, stopIndex});
@@ -785,11 +790,6 @@ SpectrumWifiPhy::GetBandForInterface(Ptr<WifiSpectrumPhyInterface> spectrumPhyIn
         NS_ASSERT(frequencies.first >= MHzToHz(freqRange.minFrequency));
         NS_ASSERT(frequencies.second <= MHzToHz(freqRange.maxFrequency));
         NS_ASSERT((frequencies.second - frequencies.first) == MHzToHz(bandWidth));
-        if (startIndex >= totalNumBands / 2)
-        {
-            // step past DC
-            startIndex += 1;
-        }
         bandInfo.indices.emplace_back(startIndex, stopIndex);
         bandInfo.frequencies.emplace_back(frequencies);
         ++bandIndex;

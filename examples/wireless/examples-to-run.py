@@ -23,6 +23,7 @@ cpp_examples = [
     ("wifi-simple-infra", "True", "True"),
     ("wifi-simple-interference", "True", "True"),
     ("wifi-phy-interference", "True", "True"),
+    ("wifi-ble-interference", "True", "True"),
     ("wifi-wired-bridging", "True", "True"),
     ("wifi-sleep", "True", "True"),
     ("wifi-blockack", "True", "True"),

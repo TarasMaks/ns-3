@@ -317,6 +317,9 @@ main(int argc, char* argv[])
                             ->GetPhy()
                             ->GetObject<WaveformGenerator>());
 
+    // Allow the waveform generator to run briefly and then stop the simulation
+    Simulator::Stop(startTime + Seconds(1));
+
     Simulator::Run();
     PrintSubcarrierResults(Prss, Irss);
     Simulator::Destroy();

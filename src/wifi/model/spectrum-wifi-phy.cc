@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT WIFI_PHY_NS_LOG_APPEND_CONTEXT(Ptr(this, false))
@@ -784,7 +785,10 @@ SpectrumWifiPhy::GetBandForInterface(Ptr<WifiSpectrumPhyInterface> spectrumPhyIn
         auto freqRange = spectrumPhyInterface->GetFrequencyRange();
         NS_ASSERT(frequencies.first >= MHzToHz(freqRange.minFrequency));
         NS_ASSERT(frequencies.second <= MHzToHz(freqRange.maxFrequency));
-        NS_ASSERT((frequencies.second - frequencies.first) == MHzToHz(bandWidth));
+        const Hz_u expected = MHzToHz(bandWidth);
+        const Hz_u measured = frequencies.second - frequencies.first;
+        const Hz_u tolerance = GetSubcarrierSpacing() / 2.0;
+        NS_ASSERT(std::abs(measured - expected) <= tolerance);
         if (startIndex >= totalNumBands / 2)
         {
             // step past DC

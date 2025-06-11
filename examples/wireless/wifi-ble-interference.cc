@@ -231,7 +231,7 @@ main(int argc, char* argv[])
     spectrumChannel->AddPropagationLossModel(lossModel);
     wifiPhy.SetChannel(spectrumChannel);
     wifiPhy.SetErrorRateModel("ns3::YansErrorRateModel");
-    wifiPhy.Set("ChannelSettings", StringValue("{6, 0, BAND_2_4GHZ, 0}"));
+    wifiPhy.Set("ChannelSettings", StringValue("{6, 20, BAND_2_4GHZ, 0}"));
 
     // Add a mac and disable rate control
     WifiMacHelper wifiMac;

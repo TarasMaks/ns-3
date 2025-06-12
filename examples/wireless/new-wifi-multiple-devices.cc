@@ -12,6 +12,8 @@
 #include "ns3/mobility-helper.h"
 #include "ns3/on-off-helper.h"
 #include "ns3/packet-sink-helper.h"
+#include "ns3/ipv4-flow-classifier.h"
+#include "ns3/string.h"
 #include "ns3/ssid.h"
 #include "ns3/uinteger.h"
 #include "ns3/yans-wifi-channel.h"

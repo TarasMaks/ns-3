@@ -323,3 +323,9 @@ build_example(
     ${libapplications}
     ${libinternet}
 )
+
+build_example(
+  NAME new-wifi-multiple-devices
+  SOURCE_FILES new-wifi-multiple-devices.cc
+  LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libflow-monitor}
+)

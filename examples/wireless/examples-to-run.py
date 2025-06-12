@@ -341,6 +341,7 @@ cpp_examples = [
         "True",
         "True",
     ),
+    ("new-wifi-multiple-devices", "True", "False"),
 ]
 
 # A list of Python examples to run in order to ensure that they remain

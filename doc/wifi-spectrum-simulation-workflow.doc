@@ -1,0 +1,59 @@
+This document outlines a step-by-step approach for building detailed Wi-Fi simulations in ns-3 using the SpectrumWifiPhy model.  It summarizes relevant information contained in the repository documentation and examples.
+
+1. **Overview of SpectrumWifiPhy**
+
+   The SpectrumWifiPhy implementation resides in `src/wifi/model/spectrum-wifi-phy.{cc,h}` and builds upon helper classes such as `wifi-spectrum-phy-interface.{cc,h}` and `wifi-spectrum-signal-parameters.{cc,h}`.  These components extend the Spectrum module with Wi-Fi specific helpers like `wifi-spectrum-value-helper.{cc,h}`.  SpectrumWifiPhy reuses the same InterferenceHelper and error rate models as YansWifiPhy but additionally supports foreign (non‑Wi‑Fi) signals treated as additive noise.  Two main changes are the use of `MultiModelSpectrumChannel` and the ability to inject foreign signals into the InterferenceHelper.  CCA busy conditions can therefore be triggered by other technologies, meaning the `WifiPhy::CcaEdThreshold` attribute becomes more important.  The Wi-Fi spectrum is divided into sub‑bands using transmit masks and a bandwidth filter can be attached to ignore packets that do not overlap the current channel.  A forwarding class `WifiSpectrumPhyInterface` allows multiple RF interfaces for flexible channel switching.  (See `src/wifi/doc/source/wifi-design.rst` lines 663–767.)
+
+2. **Example Programs**
+
+   The repository provides several example programs that demonstrate how to configure SpectrumWifiPhy.  The `wifi-spectrum-per-example.cc` program allows the user to switch between `SpectrumWifiPhy` and `YansWifiPhy` and logs received SNR for a range of MCS values.  A related example, `wifi-spectrum-per-interference.cc`, injects a non‑Wi‑Fi waveform to illustrate interference effects.  Both examples show how to configure propagation loss and delay models and how to set the transmit power.  Sample output illustrating how SNR and throughput vary with MCS can be found in `src/wifi/doc/source/wifi-testing.rst` lines 160–241.
+
+3. **Selecting the PHY Model**
+
+   Use `WifiHelper` to set the standard (e.g., 802.11n, 802.11ac, 802.11ax) and create a Spectrum-aware PHY.  The helper classes in `src/wifi/helper` mirror the Yans helpers and simplify configuration.  For instance:
+
+   ```cpp
+   WifiHelper wifi;
+   wifi.SetStandard(WIFI_STANDARD_80211ac);  // or 802.11ax
+
+   SpectrumWifiPhyHelper phy;
+   phy.SetChannel(channel.Create());
+   ```
+
+4. **Configuring the Channel and Propagation**
+
+   The SpectrumWifiPhy must use a `MultiModelSpectrumChannel` to allow concurrent Wi‑Fi and non‑Wi‑Fi transmissions.  Attach propagation models such as `LogDistancePropagationLossModel`, `NakagamiPropagationLossModel`, and `ConstantSpeedPropagationDelayModel`.  Example configuration is shown in the Spectrum PER example around lines 170–199.
+
+5. **MAC Configuration and QoS**
+
+   Use `QosWifiMacHelper` with `WifiHelper` to enable EDCA queues for traffic classes.  A Remote Station Manager (e.g., `MinstrelHtWifiManager`) handles rate control.  The MAC layer interacts with the Association Manager to manage scanning and association (see `src/wifi/doc/source/wifi-design.rst` lines 801–811).
+
+6. **Setting PHY Attributes**
+
+   Attributes such as `ChannelWidth`, `ShortGuardEnabled`, `RxNoiseFigure`, `TxPowerStart`, and `TxPowerEnd` control spectrum bandwidth, guard interval, receiver noise figure, and transmit power.  Many additional attributes are documented in the Wi‑Fi model manual.  Transmission mask parameters like `TxMaskInnerBandMinimumRejection` and others are listed in `CHANGES.md` line 608.
+
+7. **Spectrum‑Aware Interference Handling**
+
+   SpectrumWifiPhy tracks overlapping packets as power spectral density (PSD) values.  The InterferenceHelper computes SINR per subcarrier, enabling more accurate modeling than single-SNR models.  Signals arriving from inactive interfaces can be tracked to produce accurate CCA indications when switching channels (see `src/wifi/doc/source/wifi-design.rst` lines 760–770).
+
+8. **Tracing and Statistics**
+
+   The Wi-Fi module provides trace sources such as `WifiPhy::SignalTransmission`, `SpectrumWifiPhy::SignalArrival`, and `WifiPhyRxTraceHelper` for detailed logging.  Example trace code connecting to `MonitorSnifferRx` to print SNR values is shown in the Spectrum PER example documentation (`src/wifi/doc/source/wifi-testing.rst` lines 160–176).  Additional traces like `RxError`, `TxBegin`, and `PhyRxPpduDrop` can be enabled for debugging.
+
+9. **Modeling MAC Behavior**
+
+   The MAC layer implements DCF/EDCA with contention windows, AIFS, TXOP, AMPDU aggregation, and block ACK logic.  The Association Manager handles scanning, association, and reassociation.  The DCF relies on a backoff timer approach for efficiency (see `src/wifi/doc/source/wifi-design.rst` lines 798–806 and subsequent lines describing backoff behavior).
+
+10. **Adding Interferers**
+
+    To investigate per‑subcarrier interference, include additional nodes transmitting at overlapping or adjacent channels on the same `MultiModelSpectrumChannel`.  Configure their channel width and MCS, or even use custom non‑Wi‑Fi waveform generators as in `wifi-spectrum-per-interference.cc`.
+
+11. **Analysis Tools**
+
+    Use FlowMonitor for throughput and delay metrics.  The `WifiSpectrumValueHelper` can extract PSD values over time.  Packet tags can store MCS or SINR per packet.  The interference example shows how SNR degrades as waveform power increases (`src/wifi/doc/source/wifi-testing.rst` lines 210–237).  Wireshark (PCAP) output and `PhyRxDrop` counters can assist in debugging collisions and channel errors.
+
+12. **Further Customization**
+
+    Advanced users may subclass `SpectrumErrorModel` for custom PER curves or implement a `WifiTxVectorFactory` for explicit MCS control.  The Wi‑Fi design documentation explains how multiple RF interfaces enable flexible channel switching, improving CCA indications when channels are changed (`src/wifi/doc/source/wifi-design.rst` lines 745–770).
+
+This workflow combines guidance from the Wi‑Fi design and testing documentation with example code shipped in the repository to help users create high‑fidelity simulations with per‑subcarrier interference modeling using SpectrumWifiPhy.

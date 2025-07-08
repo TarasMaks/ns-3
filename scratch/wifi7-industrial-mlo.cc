@@ -6,6 +6,7 @@
 #include "ns3/internet-module.h"
 #include "ns3/udp-client-server-helper.h"
 #include "ns3/flow-monitor-helper.h"
+#include "ns3/ipv4-flow-classifier.h"
 
 using namespace ns3;
 

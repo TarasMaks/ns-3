@@ -18,13 +18,19 @@ NS_LOG_COMPONENT_DEFINE("Wifi7IndustrialMlo");
 
 int main(int argc, char* argv[])
 {
-    uint32_t nSta = 10;
-    Time simTime = Seconds(10);
+    uint32_t nSta = 10;        // default number of stations
+    Time simTime = Seconds(10); // default simulation time
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("nSta", "Number of station nodes", nSta);
     cmd.AddValue("simTime", "Simulation duration", simTime);
     cmd.Parse(argc, argv);
+
+    if (nSta == 0 || simTime <= Seconds(0))
+    {
+        NS_LOG_UNCOND("Error: nSta must be greater than 0 and simTime must be positive");
+        return 1;
+    }
 
     NodeContainer apNode;
     apNode.Create(1);

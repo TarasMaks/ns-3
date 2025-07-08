@@ -1,5 +1,9 @@
 /*
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Example usage:
+ *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=20 --simTime=15s"
+ *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=50 --simTime=30s"
  */
 
 #include "ns3/core-module.h"

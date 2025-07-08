@@ -21,6 +21,11 @@ int main(int argc, char* argv[])
     uint32_t nSta = 10;
     Time simTime = Seconds(10);
 
+    CommandLine cmd(__FILE__);
+    cmd.AddValue("nSta", "Number of station nodes", nSta);
+    cmd.AddValue("simTime", "Simulation duration", simTime);
+    cmd.Parse(argc, argv);
+
     NodeContainer apNode;
     apNode.Create(1);
     NodeContainer staNodes;

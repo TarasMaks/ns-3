@@ -104,7 +104,8 @@ int main(int argc, char* argv[])
         client.SetAttribute("Interval", TimeValue(MicroSeconds(100)));
         client.SetAttribute("PacketSize", UintegerValue(1200));
         ApplicationContainer clientApp = client.Install(apNode.Get(0));
-        clientApp.Start(Seconds(1.0));
+        // Start traffic after STAs have had time to associate
+        clientApp.Start(Seconds(2.0));
         clientApp.Stop(simTime);
     }
 

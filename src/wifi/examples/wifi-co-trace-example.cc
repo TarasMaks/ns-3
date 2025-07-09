@@ -175,17 +175,18 @@ main(int argc, char* argv[])
     }
 
     sinkApplications.Start(Seconds(0.0));
-    sinkApplications.Stop(Seconds(1.0) + duration + MilliSeconds(20));
-    sourceApplications.Start(Seconds(1.0));
-    sourceApplications.Stop(Seconds(1.0) + duration);
+    // Allow association to complete before starting traffic
+    sinkApplications.Stop(Seconds(2.0) + duration + MilliSeconds(20));
+    sourceApplications.Start(Seconds(2.0));
+    sourceApplications.Stop(Seconds(2.0) + duration);
 
     // Use the NeighborCacheHelper to avoid ARP messages (ARP replies, since they are unicast,
     // count in the statistics.  The cache operation must be scheduled after WifiNetDevices are
     // started, until issue #851 is fixed.  The indirection through a normal function is
     // necessary because NeighborCacheHelper::PopulateNeighborCache() is overloaded
-    Simulator::Schedule(Seconds(0.99), &PopulateNeighborCache);
+    Simulator::Schedule(Seconds(1.99), &PopulateNeighborCache);
 
-    WifiCoTraceHelper wifiCoTraceHelper(Seconds(1), Seconds(1) + duration);
+    WifiCoTraceHelper wifiCoTraceHelper(Seconds(2), Seconds(2) + duration);
     wifiCoTraceHelper.Enable(allDevices);
 
     Simulator::Stop(duration + Seconds(2));

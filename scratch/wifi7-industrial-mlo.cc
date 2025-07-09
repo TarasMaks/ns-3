@@ -4,7 +4,12 @@
  * Example usage:
  *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=20 --simTime=15s"
  *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=50 --simTime=30s"
- */
+ *
+ * Note: Multi-Link Operation support is still evolving in ns-3.  The
+ * Wi-Fi documentation warns that some features (e.g., EMLSR) remain
+ * experimental and may lead to crashes.  This example configures two
+ * links but avoids enabling EMLSR explicitly.
+*/
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
@@ -43,9 +48,12 @@ int main(int argc, char* argv[])
 
     WifiHelper wifi;
     wifi.SetStandard(WIFI_STANDARD_80211be);
-    // Use MinstrelHtWifiManager for rate adaptation and disable the
-    // experimental EMLSR option to avoid crashes.
-    wifi.SetRemoteStationManager("ns3::MinstrelHtWifiManager");
+    // Use MinstrelHtWifiManager for rate adaptation on each link.  The
+    // Wi-Fi documentation notes that EMLSR and some MLO features are
+    // still experimental and can cause crashes; this example avoids
+    // enabling them explicitly.
+    wifi.SetRemoteStationManager(static_cast<uint8_t>(0), "ns3::MinstrelHtWifiManager");
+    wifi.SetRemoteStationManager(static_cast<uint8_t>(1), "ns3::MinstrelHtWifiManager");
 
     SpectrumWifiPhyHelper phy(2);
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);

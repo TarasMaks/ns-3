@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
     wifi.SetRemoteStationManager(static_cast<uint8_t>(0), "ns3::MinstrelHtWifiManager");
     wifi.SetRemoteStationManager(static_cast<uint8_t>(1), "ns3::MinstrelHtWifiManager");
 
+    //wifi.SetRemoteStationManager(0, "ns3::MinstrelHtWifiManager");
+    //wifi.SetRemoteStationManager(1, "ns3::MinstrelHtWifiManager");
+
     SpectrumWifiPhyHelper phy(2);
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
     phy.Set("ChannelSwitchDelay", TimeValue(MicroSeconds(100)));

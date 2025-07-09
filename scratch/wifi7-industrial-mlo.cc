@@ -43,12 +43,9 @@ int main(int argc, char* argv[])
 
     WifiHelper wifi;
     wifi.SetStandard(WIFI_STANDARD_80211be);
-    wifi.ConfigEhtOptions("EmlsrActivated", BooleanValue(true));
-    wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                 "DataMode",
-                                 StringValue("EhtMcs13"),
-                                 "ControlMode",
-                                 StringValue("EhtMcs13"));
+    // Use MinstrelHtWifiManager for rate adaptation and disable the
+    // experimental EMLSR option to avoid crashes.
+    wifi.SetRemoteStationManager("ns3::MinstrelHtWifiManager");
 
     SpectrumWifiPhyHelper phy(2);
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
@@ -68,11 +65,9 @@ int main(int argc, char* argv[])
     Ssid ssid = Ssid("wifi7-industrial");
 
     mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid));
-    mac.SetEmlsrManager("ns3::DefaultEmlsrManager", "EmlsrLinkSet", StringValue("0,1"));
     NetDeviceContainer staDevices = wifi.Install(phy, mac, staNodes);
 
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    mac.SetApEmlsrManager("ns3::DefaultApEmlsrManager");
     NetDeviceContainer apDevice = wifi.Install(phy, mac, apNode);
 
     MobilityHelper mobility;

@@ -122,13 +122,21 @@ int main(int argc, char* argv[])
         Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(s.first);
         if (t.sourceAddress == apIf.GetAddress(0))
         {
-            double throughput = s.second.rxBytes * 8.0 /
-                                  (s.second.timeLastRxPacket.GetSeconds() -
-                                   s.second.timeFirstTxPacket.GetSeconds()) / 1e6;
-            double delay = s.second.delaySum.GetSeconds() / s.second.rxPackets;
-            std::cout << "Flow to " << t.destinationAddress
-                      << " Throughput: " << throughput << " Mbit/s"
-                      << " Avg Delay: " << delay * 1000 << " ms" << std::endl;
+            if (s.second.rxPackets > 0 &&
+                s.second.timeLastRxPacket > s.second.timeFirstTxPacket)
+            {
+                double throughput = s.second.rxBytes * 8.0 /
+                                      (s.second.timeLastRxPacket.GetSeconds() -
+                                       s.second.timeFirstTxPacket.GetSeconds()) / 1e6;
+                double delay = s.second.delaySum.GetSeconds() / s.second.rxPackets;
+                std::cout << "Flow to " << t.destinationAddress
+                          << " Throughput: " << throughput << " Mbit/s"
+                          << " Avg Delay: " << delay * 1000 << " ms" << std::endl;
+            }
+            else
+            {
+                std::cout << "Flow to " << t.destinationAddress << " No packets received" << std::endl;
+            }
         }
     }
 

@@ -343,6 +343,7 @@ cpp_examples = [
         "True",
     ),
     ("new-wifi-multiple-devices", "True", "False"),
+    ("wifi-eht-minimal --simulationTime=0.1s", "True", "True"),
 ]
 
 # A list of Python examples to run in order to ensure that they remain

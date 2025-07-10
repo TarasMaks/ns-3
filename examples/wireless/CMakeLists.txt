@@ -23,6 +23,13 @@ build_example(
 )
 
 build_example(
+  NAME wifi-80211be
+  SOURCE_FILES wifi-80211be.cc
+  LIBRARIES_TO_LINK ${libwifi}
+                    ${libapplications}
+)
+
+build_example(
   NAME wifi-adhoc
   SOURCE_FILES wifi-adhoc.cc
   LIBRARIES_TO_LINK ${libwifi}

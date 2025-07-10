@@ -314,6 +314,12 @@ build_example(
 )
 
 build_example(
+  NAME wifi-eht-minimal
+  SOURCE_FILES wifi-eht-minimal.cc
+  LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libflow-monitor}
+)
+
+build_example(
   NAME wifi-eht-network
   SOURCE_FILES wifi-eht-network.cc
   LIBRARIES_TO_LINK ${libwifi}
@@ -335,4 +341,16 @@ build_example(
   NAME new-wifi-multiple-devices
   SOURCE_FILES new-wifi-multiple-devices.cc
   LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libflow-monitor}
+)
+
+build_example(
+  NAME wifi7-industrial-mlo
+  SOURCE_FILES ../../scratch/wifi7-industrial-mlo.cc
+  LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libinternet} ${libflow-monitor}
+)
+
+build_example(
+  NAME wifi6-vs-wifi7
+  SOURCE_FILES ../../scratch/wifi6-vs-wifi7.cc
+  LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libinternet} ${libflow-monitor}
 )

@@ -1,14 +1,16 @@
 #include "ns3/core-module.h"
-#include "ns3/network-module.h"
-#include "ns3/internet-module.h"
-#include "ns3/mobility-module.h"
-#include "ns3/wifi-module.h"
-#include "ns3/udp-client-server-helper.h"
 #include "ns3/flow-monitor-helper.h"
+#include "ns3/internet-module.h"
+#include "ns3/ipv4-flow-classifier.h"
+#include "ns3/mobility-module.h"
+#include "ns3/network-module.h"
+#include "ns3/udp-client-server-helper.h"
+#include "ns3/wifi-module.h"
 
 using namespace ns3;
 
-namespace {
+namespace
+{
 std::vector<double>
 ParseDoubles(const std::string& str)
 {
@@ -62,8 +64,9 @@ RunExperiment(WifiStandard standard, double distance, uint8_t mcs)
     apNode.Create(1);
 
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
-    YansWifiPhyHelper phy = YansWifiPhyHelper::Default();
+    YansWifiPhyHelper phy;
     phy.SetChannel(channel.Create());
+    phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
 
     WifiHelper wifi;
     wifi.SetStandard(standard);
@@ -136,12 +139,12 @@ RunExperiment(WifiStandard standard, double distance, uint8_t mcs)
         Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(s.first);
         if (t.destinationAddress == apIf.GetAddress(0))
         {
-            if (s.second.rxPackets > 0 &&
-                s.second.timeLastRxPacket > s.second.timeFirstTxPacket)
+            if (s.second.rxPackets > 0 && s.second.timeLastRxPacket > s.second.timeFirstTxPacket)
             {
                 result.throughputMbps = s.second.rxBytes * 8.0 /
-                                      (s.second.timeLastRxPacket.GetSeconds() -
-                                       s.second.timeFirstTxPacket.GetSeconds()) / 1e6;
+                                        (s.second.timeLastRxPacket.GetSeconds() -
+                                         s.second.timeFirstTxPacket.GetSeconds()) /
+                                        1e6;
                 result.delayMs = s.second.delaySum.GetSeconds() / s.second.rxPackets * 1000;
             }
         }
@@ -189,4 +192,3 @@ main(int argc, char* argv[])
 
     return 0;
 }
-

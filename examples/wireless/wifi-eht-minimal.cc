@@ -1,8 +1,11 @@
 #include "ns3/command-line.h"
 #include "ns3/config.h"
+#include "ns3/flow-monitor-helper.h"
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
+#include "ns3/ipv4-flow-classifier.h"
 #include "ns3/ipv4-global-routing-helper.h"
+#include "ns3/string.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/ssid.h"
 #include "ns3/udp-client-server-helper.h"
@@ -10,7 +13,6 @@
 #include "ns3/uinteger.h"
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/yans-wifi-helper.h"
-#include "ns3/flow-monitor-helper.h"
 
 using namespace ns3;
 
@@ -98,9 +100,10 @@ main(int argc, char* argv[])
         auto t = classifier->FindFlow(s.first);
         if (t.destinationAddress == staIf.GetAddress(0))
         {
-            double throughput = s.second.rxBytes * 8.0 /
-                                 (simulationTime.GetSeconds()) / 1e6;
-            double meanDelay = s.second.rxPackets ? s.second.delaySum.GetSeconds() / s.second.rxPackets : 0.0;
+
+            double throughput = s.second.rxBytes * 8.0 / (simulationTime.GetSeconds()) / 1e6;
+            double meanDelay =
+                s.second.rxPackets ? s.second.delaySum.GetSeconds() / s.second.rxPackets : 0.0;
             std::cout << "Throughput: " << throughput << " Mbps" << std::endl;
             std::cout << "Mean delay: " << meanDelay << " s" << std::endl;
         }
@@ -108,5 +111,5 @@ main(int argc, char* argv[])
 
     Simulator::Destroy();
     return 0;
+  
 }
-

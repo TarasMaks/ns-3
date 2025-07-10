@@ -66,6 +66,7 @@ cpp_examples = [
     ("wifi-ofdm-he-validation", "True", "True"),
     ("wifi-error-models-comparison", "True", "True"),
     ("wifi-80211n-mimo --simulationTime=0.1s --step=10", "True", "True"),
+    ("wifi-80211be --simulationTime=0.1s --step=10", "True", "True"),
     (
         "wifi-ht-network --simulationTime=0.2s --frequency=5 --useRts=0 --minExpectedThroughput=5 --maxExpectedThroughput=135",
         "True",

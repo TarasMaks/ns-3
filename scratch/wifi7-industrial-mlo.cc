@@ -5,16 +5,16 @@
  *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=20 --simTime=15s"
  *   ./ns3 run "scratch/wifi7-industrial-mlo --nSta=50 --simTime=30s"
  *
- * Note: Multi-Link Operation support is still evolving in ns-3.  The
- * Wi-Fi documentation warns that some features (e.g., EMLSR) remain
- * experimental and may lead to crashes.  This example configures two
- * links but avoids enabling EMLSR explicitly.
+ * This example demonstrates a simple Wi-Fi 7 network with one access
+ * point and multiple stations.  It intentionally avoids experimental
+ * multi-link operation and other unstable features.
 */
 
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/spectrum-module.h"
+#include "ns3/yans-wifi-helper.h"
+#include "ns3/yans-wifi-channel.h"
 #include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/udp-client-server-helper.h"
@@ -48,29 +48,16 @@ int main(int argc, char* argv[])
 
     WifiHelper wifi;
     wifi.SetStandard(WIFI_STANDARD_80211be);
-    // Use MinstrelHtWifiManager for rate adaptation on each link.  The
-    // Wi-Fi documentation notes that EMLSR and some MLO features are
-    // still experimental and can cause crashes; this example avoids
-    // enabling them explicitly.
-    wifi.SetRemoteStationManager(static_cast<uint8_t>(0), "ns3::MinstrelHtWifiManager");
-    wifi.SetRemoteStationManager(static_cast<uint8_t>(1), "ns3::MinstrelHtWifiManager");
+    wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
+                                 "DataMode",
+                                 StringValue("EhtMcs9"),
+                                 "ControlMode",
+                                 StringValue("EhtMcs9"));
 
-    //wifi.SetRemoteStationManager(0, "ns3::MinstrelHtWifiManager");
-    //wifi.SetRemoteStationManager(1, "ns3::MinstrelHtWifiManager");
-
-    SpectrumWifiPhyHelper phy(2);
+    YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
+    YansWifiPhyHelper phy;
+    phy.SetChannel(channel.Create());
     phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-    phy.Set("ChannelSwitchDelay", TimeValue(MicroSeconds(100)));
-
-    Ptr<MultiModelSpectrumChannel> ch6 = CreateObject<MultiModelSpectrumChannel>();
-    ch6->AddPropagationLossModel(CreateObject<LogDistancePropagationLossModel>());
-    phy.AddChannel(ch6, WIFI_SPECTRUM_6_GHZ);
-    phy.Set(0, "ChannelSettings", StringValue("{0, 320, BAND_6GHZ, 0}"));
-
-    Ptr<MultiModelSpectrumChannel> ch5 = CreateObject<MultiModelSpectrumChannel>();
-    ch5->AddPropagationLossModel(CreateObject<LogDistancePropagationLossModel>());
-    phy.AddChannel(ch5, WIFI_SPECTRUM_5_GHZ);
-    phy.Set(1, "ChannelSettings", StringValue("{0, 160, BAND_5GHZ, 0}"));
 
     WifiMacHelper mac;
     Ssid ssid = Ssid("wifi7-industrial");

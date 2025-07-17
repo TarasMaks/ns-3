@@ -101,7 +101,6 @@ RunExperiment(double distance, const std::string& mcs, Time simulationTime)
     Ipv4AddressHelper address;
     address.SetBase("10.1.0.0", "255.255.255.0");
     Ipv4InterfaceContainer staIf = address.Assign(staDevice);
-    Ipv4InterfaceContainer apIf = address.Assign(apDevice);
 
     uint16_t port = 9;
     UdpServerHelper server(port);

@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 #include "ns3/command-line.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/internet-stack-helper.h"

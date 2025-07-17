@@ -11,6 +11,11 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/gnuplot.h"
 #include "ns3/yans-error-rate-model.h"
+#include <vector>
+#include <sstream>
+#include <fstream>
+#include <cmath>
+#include <string>
 
 using namespace ns3;
 

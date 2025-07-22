@@ -345,6 +345,7 @@ cpp_examples = [
     ("new-wifi-multiple-devices", "True", "False"),
     ("wifi-eht-multiple-nodes --simulationTime=0.1s", "True", "True"),
     ("wifi-eht-minimal --simulationTime=0.1s", "True", "True"),
+    ("wifi-eht-minimal-spectrum --simulationTime=0.1s", "True", "True"),
     ("wifi7-industrial-mlo --nSta=1 --simTime=3s", "True", "True"),
     ("wifi7-industrial-mlo-mcs --nSta=1 --simTime=3s --ehtMcs=EhtMcs9", "True", "True"),
     ("wifi6-vs-wifi7 --distances=5 --mcs=0", "True", "True"),

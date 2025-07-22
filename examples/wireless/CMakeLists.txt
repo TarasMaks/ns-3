@@ -320,6 +320,12 @@ build_example(
 )
 
 build_example(
+  NAME wifi-eht-minimal-spectrum
+  SOURCE_FILES wifi-eht-minimal-spectrum.cc
+  LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libflow-monitor}
+)
+
+build_example(
   NAME wifi-eht-multiple-nodes
   SOURCE_FILES wifi-eht-multiple-nodes.cc
   LIBRARIES_TO_LINK ${libwifi} ${libapplications} ${libflow-monitor}

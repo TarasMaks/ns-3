@@ -1707,8 +1707,8 @@ WifiRemoteStationManager::AddStationHeCapabilities(Mac48Address from,
     }
     else
     {
-        // todo: Using 3200ns, default value for HeConfiguration::GuardInterval
-        state->m_guardInterval = NanoSeconds(3200);
+        // fall back to the device configuration guard interval
+        state->m_guardInterval = GetGuardInterval();
     }
     for (const auto& mcs : m_wifiPhy->GetMcsList(WIFI_MOD_CLASS_HE))
     {

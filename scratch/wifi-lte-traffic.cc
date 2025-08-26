@@ -7,6 +7,7 @@
 #include "ns3/udp-client-server-helper.h"
 #include "ns3/packet-sink-helper.h"
 #include "ns3/socket.h"
+#include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
 
@@ -146,8 +147,22 @@ main(int argc, char *argv[])
   voiceApp2->SetStartTime(Seconds(1.0));
   voiceApp2->SetStopTime(Seconds(10.0));
 
+  FlowMonitorHelper flowmonHelper;
+  Ptr<FlowMonitor> monitor = flowmonHelper.InstallAll();
+
   Simulator::Stop(Seconds(10.0));
   Simulator::Run();
+  monitor->CheckForLostPackets();
+  double simTime = Simulator::Now().GetSeconds();
+  for (const auto& statsPair : monitor->GetFlowStats())
+  {
+      auto stats = statsPair.second;
+      double throughputKbps = (stats.rxBytes * 8.0) / simTime / 1000.0;
+      double avgDelayMs = stats.delaySum.GetSeconds() / stats.rxPackets * 1000.0;
+      NS_LOG_UNCOND("Flow " << statsPair.first 
+                   << ": throughput=" << throughputKbps << " kbps, "
+                   << "latency=" << avgDelayMs << " ms");
+  }
   Simulator::Destroy();
 
   return 0;

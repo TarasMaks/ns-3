@@ -9,3 +9,4 @@
 !wifi7-industrial-mlo-mcs.cc
 !CMakeLists.txt
 !wifi6-vs-wifi7.cc
+!wifi-lte-traffic.cc

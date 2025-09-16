@@ -11,3 +11,4 @@
 !wifi6-vs-wifi7.cc
 !wifi-lte-traffic.cc
 !lte-video-traffic.cc
+!uwb-example.cc

@@ -12,3 +12,4 @@
 !wifi-lte-traffic.cc
 !lte-video-traffic.cc
 !uwb-example.cc
+!uwb-multiple-nodes.cc

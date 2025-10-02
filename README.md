@@ -15,6 +15,7 @@ See the LICENSE file for more details.
 
 * [Overview](#overview-an-open-source-project)
 * [Software overview](#software-overview)
+* [ns-3 Architecture for Wireless Simulation](#ns-3-architecture-for-wireless-simulation)
 * [Getting ns-3](#getting-ns-3)
 * [Building ns-3](#building-ns-3)
 * [Testing ns-3](#testing-ns-3)
@@ -66,6 +67,174 @@ by the open source project can be found in the `src` directory.
 Users may extend ns-3 by adding libraries to the build;
 third-party libraries can be found on the [ns-3 App Store](https://www.nsnam.org)
 or elsewhere in public Git repositories, and are usually added to the `contrib` directory.
+
+## ns-3 Architecture for Wireless Simulation
+
+The ns-3 framework is organised as a collection of reusable building blocks that can be
+composed to represent wireless network scenarios with differing levels of fidelity.  The
+following sections summarise the main pieces you are likely to include when presenting the
+architecture in a slide deck.
+
+### High-level layering
+
+ns-3 provides several foundational libraries that are used across all simulation models:
+
+* **Simulation core (`src/core`, `src/simulator`):** Implements the discrete-event engine,
+  real-time scheduler variants, event queues, logging, and command-line handling.
+* **Network stack (`src/network`, `src/internet`):** Supplies common packet primitives,
+  headers, sockets, routing, and internet protocols for IPv4/IPv6.
+* **Mobility and propagation (`src/mobility`, `src/propagation`, `src/aodv`, etc.):** Models
+  node movement, radio propagation loss, and fading effects that are re-used by multiple
+  wireless technologies.
+* **Wireless access technologies (`src/wifi`, `src/lte`, `src/nr`, `src/mesh`, `src/wimax`,
+  ...):** Each module encapsulates PHY/MAC implementations, helper classes, and
+  configuration defaults for a particular radio technology.
+
+These libraries are compiled into modular shared libraries.  Simulation scripts—typically
+placed in the `scratch/` directory for experimentation or `examples/` for curated samples—link
+against whichever libraries they require.
+
+### Key simulation concepts
+
+* **Nodes (`ns3::Node`):** Abstract containers for protocol stacks and applications.  In
+  wireless simulations, nodes usually hold one or more `NetDevice` instances (e.g., Wi-Fi
+  radios) and mobility models.
+* **NetDevices and Channels:** `NetDevice` objects (such as `WifiNetDevice`, `LteUeNetDevice`)
+  model the MAC/PHY layers.  Devices communicate through `Channel` objects that represent
+  shared mediums (e.g., `YansWifiChannel`, `LteSpectrumChannel`).
+* **Helpers:** High-level configurators (e.g., `WifiHelper`, `LteHelper`) that encapsulate the
+  boilerplate required to instantiate devices, channels, and PHY/MAC settings.
+* **Attributes and Config Store:** ns-3 exposes almost every configuration parameter via an
+  attribute system.  Attributes can be set programmatically (`Config::Set`), by command-line
+  arguments, or via configuration files using the `ConfigStore` module.
+* **Tracing:** Trace sources emit events (packet receptions, state changes) that can be
+  connected to user-defined callbacks, pcap/file writers, or the statistics framework.
+
+### Execution flow
+
+1. **Scenario setup:** Create nodes, assign mobility models, and install protocol stacks and
+   applications.
+2. **Device installation:** Use helpers to install wireless net devices (e.g., Wi-Fi, LTE) and
+   configure channel/propagation models.
+3. **Attribute configuration:** Adjust PHY/MAC parameters (channel width, modulation, power
+   levels) via attributes or helper setters.
+4. **Tracing and logging:** Enable ASCII/pcap tracing or connect callbacks to trace sources.
+5. **Run the simulator:** Call `Simulator::Run()` to execute events in timestamp order, then
+   `Simulator::Destroy()` to clean up global state.
+
+### Wireless module structure
+
+Wireless modules share common design patterns:
+
+* **PHY layer:** Models radio spectrum behaviour (transmitters, receivers, interference).  The
+  Wi-Fi module, for example, provides `YansWifiPhy`, `SpectrumWifiPhy`, and a suite of
+  propagation loss and error rate models.
+* **MAC layer:** Implements medium access control logic (DCA/EDCA for Wi-Fi, MAC Scheduler for
+  LTE).  MAC instances interact with PHY counterparts via service primitives.
+* **Channel and propagation models:** Propagation loss models (Friis, LogDistance, Nakagami)
+  plug into channels to calculate attenuation, while error rate and interference models decide
+  packet reception outcomes.
+* **Control plane managers:** Some technologies include higher-level managers (e.g., LTE’s
+  `EpcHelper`, `LteRrcProtocolIdeal`) for mobility management and core network emulation.
+* **Tracing hooks:** Each layer exports trace sources for PHY state, MAC queue events, and
+  packet counters, enabling fine-grained instrumentation in wireless studies.
+
+### Directory cheatsheet for presentations
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/core`, `src/simulator` | Discrete-event kernel and scheduling primitives. |
+| `src/network` | Common packet structures, trace system, and address abstractions. |
+| `src/mobility` | Mobility models and position allocators for moving nodes. |
+| `src/propagation` | Propagation delay and loss models used by wireless channels. |
+| `src/wifi` | IEEE 802.11 PHY/MAC models, helpers, and examples. |
+| `src/lte`, `src/nr` | 3GPP LTE/NR radio stack, EPC integration, and schedulers. |
+| `examples/wireless` | Curated example scripts for Wi-Fi, LTE, mmWave, and more. |
+| `scratch/` | Workspace for custom experiments and prototypes. |
+
+### Minimal Wi-Fi example
+
+The following C++ snippet illustrates the typical structure of a Wi-Fi simulation script.  It
+creates two nodes, installs Wi-Fi devices using the Yans helper stack, assigns IP addresses,
+and schedules an application to generate traffic.
+
+```cpp
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/wifi-module.h"
+#include "ns3/applications-module.h"
+
+using namespace ns3;
+
+int main (int argc, char *argv[])
+{
+  CommandLine cmd;
+  cmd.Parse (argc, argv);
+
+  NodeContainer nodes;
+  nodes.Create (2);
+
+  MobilityHelper mobility;
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.Install (nodes);
+
+  YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
+  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
+  phy.SetChannel (channel.Create ());
+
+  WifiHelper wifi;
+  wifi.SetStandard (WIFI_STANDARD_80211ac);
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                "DataMode", StringValue ("VhtMcs7"));
+
+  WifiMacHelper mac;
+  mac.SetType ("ns3::StaWifiMac",
+               "Ssid", SsidValue (Ssid ("ns3-wifi")));
+
+  NetDeviceContainer devices = wifi.Install (phy, mac, nodes);
+
+  InternetStackHelper stack;
+  stack.Install (nodes);
+
+  Ipv4AddressHelper address;
+  address.SetBase ("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer interfaces = address.Assign (devices);
+
+  UdpEchoServerHelper echoServer (9);
+  ApplicationContainer serverApps = echoServer.Install (nodes.Get (1));
+  serverApps.Start (Seconds (1.0));
+  serverApps.Stop (Seconds (10.0));
+
+  UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
+  echoClient.SetAttribute ("MaxPackets", UintegerValue (5));
+  echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
+  echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+
+  ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
+  clientApps.Start (Seconds (2.0));
+  clientApps.Stop (Seconds (10.0));
+
+  Simulator::Stop (Seconds (10.0));
+  Simulator::Run ();
+  Simulator::Destroy ();
+  return 0;
+}
+```
+
+To compile and run a custom script stored in `scratch/wifi-quickstart.cc`, execute:
+
+```shell
+./ns3 configure --enable-examples
+./ns3 build
+./ns3 run wifi-quickstart
+```
+
+This example highlights the interplay between nodes, helpers, mobility models, and
+applications.  You can extend it by swapping propagation models, enabling tracing (e.g.,
+`phy.EnablePcapAll("wifi-quickstart")`), or integrating advanced modules such as LTE and NR to
+illustrate cross-technology studies in your presentation.
 
 ## Getting ns-3
 

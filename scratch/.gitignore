@@ -10,6 +10,7 @@
 !CMakeLists.txt
 !wifi6-vs-wifi7.cc
 !wifi-lte-traffic.cc
+!wifi_lte_timeline_plot.py
 !lte-video-traffic.cc
 !uwb-example.cc
 !uwb-multiple-nodes.cc

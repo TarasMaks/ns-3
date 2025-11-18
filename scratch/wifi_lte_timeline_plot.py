@@ -18,10 +18,16 @@ EVENT_COLORS: Dict[str, str] = {
     "PhyRxDrop": "tab:red",
 }
 
-STATE_VALUES: Dict[str, float] = {
-    "PhyTxBegin": 1.0,
-    "PhyRxBegin": 1.0,
-    "PhyRxDrop": -1.0,
+EVENT_MARKERS: Dict[str, str] = {
+    "PhyTxBegin": "o",
+    "PhyRxBegin": "s",
+    "PhyRxDrop": "x",
+}
+
+EVENT_OFFSETS: Dict[str, float] = {
+    "PhyTxBegin": -0.2,
+    "PhyRxBegin": 0.0,
+    "PhyRxDrop": 0.2,
 }
 
 
@@ -59,71 +65,54 @@ def load_events(path: pathlib.Path) -> List[Dict[str, float]]:
     return events
 
 
-def build_step_series(events: List[Dict[str, float]]) -> Dict[int, Dict[str, List[float]]]:
-    grouped: Dict[int, List[Dict[str, float]]] = {}
-    for entry in events:
-        if entry["event"] not in STATE_VALUES:
-            continue
-        grouped.setdefault(entry["flow_id"], []).append(entry)
-
-    if not grouped:
+def plot_timeline(events: Iterable[Dict[str, float]], output: pathlib.Path, show: bool = False) -> None:
+    filtered = [e for e in events if e["event"] in EVENT_COLORS]
+    if not filtered:
         raise ValueError("No Wi-Fi PHY events found in the supplied log")
 
-    step_data: Dict[int, Dict[str, List[float]]] = {}
-    for flow_id, flow_events in grouped.items():
-        flow_events.sort(key=lambda e: e["time"])
-        times: List[float] = []
-        values: List[float] = []
+    flows = sorted({e["flow_id"] for e in filtered})
+    if not flows:
+        raise ValueError("No flow identifiers were found; ensure flow tagging is enabled")
 
-        current_state = 0.0
-        start_time = flow_events[0]["time"]
-        times.append(start_time)
-        values.append(current_state)
+    y_positions = {flow_id: idx for idx, flow_id in enumerate(flows)}
 
-        for entry in flow_events:
-            time_s = entry["time"]
-            times.append(time_s)
-            values.append(current_state)
+    fig_height = max(2.5, 1.5 * len(flows))
+    fig, ax = plt.subplots(figsize=(10.0, fig_height))
 
-            current_state = STATE_VALUES[entry["event"]]
-            times.append(time_s)
-            values.append(current_state)
-
-        total_span = max(flow_events[-1]["time"] - start_time, 1e-5)
-        tail = total_span * 0.05
-        times.append(flow_events[-1]["time"] + tail)
-        values.append(current_state)
-
-        step_data[flow_id] = {"times": times, "values": values}
-
-    return step_data
-
-
-def plot_timeline(events: Iterable[Dict[str, float]], output: pathlib.Path, show: bool = False) -> None:
-    events = list(events)
-    step_data = build_step_series(events)
-    flows = sorted(step_data)
-
-    fig, ax = plt.subplots(figsize=(10.0, 4.0))
-    for flow_id in flows:
-        series = step_data[flow_id]
-        ax.step(
-            series["times"],
-            series["values"],
-            where="post",
-            label=f"Flow {flow_id}",
-            linewidth=1.5,
+    legend_added = set()
+    for entry in filtered:
+        event = entry["event"]
+        flow_id = entry["flow_id"]
+        time_s = entry["time"]
+        y_base = y_positions[flow_id]
+        y_value = y_base + EVENT_OFFSETS.get(event, 0.0)
+        label = event if event not in legend_added else None
+        ax.scatter(
+            [time_s],
+            [y_value],
+            color=EVENT_COLORS[event],
+            marker=EVENT_MARKERS[event],
+            label=label,
+            linewidths=1.5,
         )
 
-        drop_times = [e["time"] for e in events if e["flow_id"] == flow_id and e["event"] == "PhyRxDrop"]
-        if drop_times:
-            ax.scatter(drop_times, [-1.0] * len(drop_times), color=EVENT_COLORS["PhyRxDrop"], marker="x", label=None)
+        if event == "PhyRxDrop" and entry.get("detail"):
+            ax.annotate(
+                entry["detail"],
+                (time_s, y_value),
+                textcoords="offset points",
+                xytext=(0, 6),
+                ha="center",
+                fontsize=8,
+                rotation=45,
+            )
+
+        legend_added.add(event)
 
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("State")
-    ax.set_ylim(-1.5, 1.5)
-    ax.set_yticks([-1.0, 0.0, 1.0])
-    ax.set_yticklabels(["Drop", "Idle", "TX"])
+    ax.set_ylabel("Traffic flow")
+    ax.set_yticks([y_positions[f] for f in flows])
+    ax.set_yticklabels([f"Flow {f}" for f in flows])
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
     ax.legend(loc="upper right")
     fig.tight_layout()

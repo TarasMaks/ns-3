@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import pathlib
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import matplotlib
 
@@ -18,17 +18,14 @@ EVENT_COLORS: Dict[str, str] = {
     "PhyRxDrop": "tab:red",
 }
 
-EVENT_MARKERS: Dict[str, str] = {
-    "PhyTxBegin": "o",
-    "PhyRxBegin": "s",
-    "PhyRxDrop": "x",
+STATE_VALUES: Dict[str, float] = {
+    "PhyTxBegin": 1.0,
+    "PhyRxBegin": 1.0,
+    "PhyRxDrop": -1.0,
 }
 
-EVENT_OFFSETS: Dict[str, float] = {
-    "PhyTxBegin": -0.2,
-    "PhyRxBegin": 0.0,
-    "PhyRxDrop": 0.2,
-}
+# Minimum spacing to separate back-to-idle transitions from the next event
+TRANSIENT_EPS = 1e-6
 
 
 def load_events(path: pathlib.Path) -> List[Dict[str, float]]:
@@ -65,54 +62,113 @@ def load_events(path: pathlib.Path) -> List[Dict[str, float]]:
     return events
 
 
-def plot_timeline(events: Iterable[Dict[str, float]], output: pathlib.Path, show: bool = False) -> None:
-    filtered = [e for e in events if e["event"] in EVENT_COLORS]
-    if not filtered:
+def build_step_series(
+    events: List[Dict[str, float]],
+    pulse_width: float,
+) -> Dict[int, Dict[str, List[float]]]:
+    grouped: Dict[int, List[Dict[str, float]]] = {}
+    for entry in events:
+        if entry["event"] not in STATE_VALUES:
+            continue
+        grouped.setdefault(entry["flow_id"], []).append(entry)
+
+    if not grouped:
         raise ValueError("No Wi-Fi PHY events found in the supplied log")
 
-    flows = sorted({e["flow_id"] for e in filtered})
-    if not flows:
-        raise ValueError("No flow identifiers were found; ensure flow tagging is enabled")
+    step_data: Dict[int, Dict[str, List[float]]] = {}
+    for flow_id, flow_events in grouped.items():
+        flow_events.sort(key=lambda e: e["time"])
+        times: List[float] = []
+        values: List[float] = []
 
-    y_positions = {flow_id: idx for idx, flow_id in enumerate(flows)}
+        current_state = 0.0
+        start_time = flow_events[0]["time"]
+        times.append(start_time)
+        values.append(current_state)
 
-    fig_height = max(2.5, 1.5 * len(flows))
-    fig, ax = plt.subplots(figsize=(10.0, fig_height))
+        for idx, entry in enumerate(flow_events):
+            time_s = entry["time"]
+            next_time: Optional[float] = None
+            if idx + 1 < len(flow_events):
+                next_time = flow_events[idx + 1]["time"]
 
-    legend_added = set()
-    for entry in filtered:
-        event = entry["event"]
-        flow_id = entry["flow_id"]
-        time_s = entry["time"]
-        y_base = y_positions[flow_id]
-        y_value = y_base + EVENT_OFFSETS.get(event, 0.0)
-        label = event if event not in legend_added else None
-        ax.scatter(
-            [time_s],
-            [y_value],
-            color=EVENT_COLORS[event],
-            marker=EVENT_MARKERS[event],
-            label=label,
-            linewidths=1.5,
+            # Hold the previous state until this event time
+            times.append(time_s)
+            values.append(current_state)
+
+            event = entry["event"]
+            event_state = STATE_VALUES[event]
+            current_state = event_state
+            times.append(time_s)
+            values.append(current_state)
+
+            # Decide how long to keep the pulse high (or negative on drop)
+            desired_end: Optional[float] = None
+            if pulse_width > 0.0:
+                desired_end = time_s + pulse_width
+            if next_time is not None:
+                candidate = max(time_s, next_time - TRANSIENT_EPS)
+                if desired_end is None or candidate < desired_end:
+                    desired_end = candidate
+            if desired_end is None:
+                desired_end = time_s + max(pulse_width, 1e-5)
+
+            # Ensure we do not go backwards in time
+            desired_end = max(desired_end, time_s + TRANSIENT_EPS)
+
+            current_state = 0.0
+            times.append(desired_end)
+            values.append(current_state)
+
+        total_span = max(flow_events[-1]["time"] - start_time, 1e-5)
+        tail = total_span * 0.05
+        times.append(flow_events[-1]["time"] + tail)
+        values.append(current_state)
+
+        step_data[flow_id] = {"times": times, "values": values}
+
+    return step_data
+
+
+def plot_timeline(
+    events: Iterable[Dict[str, float]],
+    output: pathlib.Path,
+    pulse_width: float,
+    show: bool = False,
+) -> None:
+    events = list(events)
+    step_data = build_step_series(events, pulse_width=pulse_width)
+    flows = sorted(step_data)
+
+    fig, ax = plt.subplots(figsize=(10.0, 4.0))
+    drop_label_shown = False
+    for flow_id in flows:
+        series = step_data[flow_id]
+        ax.step(
+            series["times"],
+            series["values"],
+            where="post",
+            label=f"Flow {flow_id}",
+            linewidth=1.5,
         )
 
-        if event == "PhyRxDrop" and entry.get("detail"):
-            ax.annotate(
-                entry["detail"],
-                (time_s, y_value),
-                textcoords="offset points",
-                xytext=(0, 6),
-                ha="center",
-                fontsize=8,
-                rotation=45,
+        drop_times = [e["time"] for e in events if e["flow_id"] == flow_id and e["event"] == "PhyRxDrop"]
+        if drop_times:
+            label = "Drop" if not drop_label_shown else None
+            ax.scatter(
+                drop_times,
+                [-1.0] * len(drop_times),
+                color=EVENT_COLORS["PhyRxDrop"],
+                marker="x",
+                label=label,
             )
-
-        legend_added.add(event)
+            drop_label_shown = True
 
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Traffic flow")
-    ax.set_yticks([y_positions[f] for f in flows])
-    ax.set_yticklabels([f"Flow {f}" for f in flows])
+    ax.set_ylabel("State")
+    ax.set_ylim(-1.5, 1.5)
+    ax.set_yticks([-1.0, 0.0, 1.0])
+    ax.set_yticklabels(["Drop", "Idle", "TX"])
     ax.grid(True, axis="x", linestyle="--", alpha=0.4)
     ax.legend(loc="upper right")
     fig.tight_layout()
@@ -138,6 +194,13 @@ def main() -> None:
         help="Destination image file for the timeline plot",
     )
     parser.add_argument(
+        "--pulse-width",
+        type=float,
+        default=0.002,
+        metavar="SECONDS",
+        help="Duration each packet burst stays high in the step plot (0 to extend until the next event)",
+    )
+    parser.add_argument(
         "--show",
         action="store_true",
         help="Display the plot interactively instead of saving it",
@@ -148,7 +211,7 @@ def main() -> None:
         raise SystemExit(f"Log file '{args.log}' does not exist")
 
     events = load_events(args.log)
-    plot_timeline(events, args.output, show=args.show)
+    plot_timeline(events, args.output, pulse_width=args.pulse_width, show=args.show)
 
 
 if __name__ == "__main__":

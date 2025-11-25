@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import pathlib
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import matplotlib
 
@@ -24,7 +24,7 @@ STATE_VALUES: Dict[str, float] = {
     "PhyRxDrop": -1.0,
 }
 
-# Minimum duration to show a transient (e.g., drop) before returning to idle
+# Minimum spacing to separate back-to-idle transitions from the next event
 TRANSIENT_EPS = 1e-6
 
 
@@ -62,7 +62,10 @@ def load_events(path: pathlib.Path) -> List[Dict[str, float]]:
     return events
 
 
-def build_step_series(events: List[Dict[str, float]]) -> Dict[int, Dict[str, List[float]]]:
+def build_step_series(
+    events: List[Dict[str, float]],
+    pulse_width: float,
+) -> Dict[int, Dict[str, List[float]]]:
     grouped: Dict[int, List[Dict[str, float]]] = {}
     for entry in events:
         if entry["event"] not in STATE_VALUES:
@@ -83,21 +86,39 @@ def build_step_series(events: List[Dict[str, float]]) -> Dict[int, Dict[str, Lis
         times.append(start_time)
         values.append(current_state)
 
-        for entry in flow_events:
+        for idx, entry in enumerate(flow_events):
             time_s = entry["time"]
+            next_time: Optional[float] = None
+            if idx + 1 < len(flow_events):
+                next_time = flow_events[idx + 1]["time"]
+
+            # Hold the previous state until this event time
             times.append(time_s)
             values.append(current_state)
 
             event = entry["event"]
-            current_state = STATE_VALUES[event]
+            event_state = STATE_VALUES[event]
+            current_state = event_state
             times.append(time_s)
             values.append(current_state)
 
-            if event == "PhyRxDrop":
-                # Drops are instantaneous; return to idle immediately after showing the dip
-                current_state = 0.0
-                times.append(time_s + TRANSIENT_EPS)
-                values.append(current_state)
+            # Decide how long to keep the pulse high (or negative on drop)
+            desired_end: Optional[float] = None
+            if pulse_width > 0.0:
+                desired_end = time_s + pulse_width
+            if next_time is not None:
+                candidate = max(time_s, next_time - TRANSIENT_EPS)
+                if desired_end is None or candidate < desired_end:
+                    desired_end = candidate
+            if desired_end is None:
+                desired_end = time_s + max(pulse_width, 1e-5)
+
+            # Ensure we do not go backwards in time
+            desired_end = max(desired_end, time_s + TRANSIENT_EPS)
+
+            current_state = 0.0
+            times.append(desired_end)
+            values.append(current_state)
 
         total_span = max(flow_events[-1]["time"] - start_time, 1e-5)
         tail = total_span * 0.05
@@ -109,9 +130,14 @@ def build_step_series(events: List[Dict[str, float]]) -> Dict[int, Dict[str, Lis
     return step_data
 
 
-def plot_timeline(events: Iterable[Dict[str, float]], output: pathlib.Path, show: bool = False) -> None:
+def plot_timeline(
+    events: Iterable[Dict[str, float]],
+    output: pathlib.Path,
+    pulse_width: float,
+    show: bool = False,
+) -> None:
     events = list(events)
-    step_data = build_step_series(events)
+    step_data = build_step_series(events, pulse_width=pulse_width)
     flows = sorted(step_data)
 
     fig, ax = plt.subplots(figsize=(10.0, 4.0))
@@ -168,6 +194,13 @@ def main() -> None:
         help="Destination image file for the timeline plot",
     )
     parser.add_argument(
+        "--pulse-width",
+        type=float,
+        default=0.002,
+        metavar="SECONDS",
+        help="Duration each packet burst stays high in the step plot (0 to extend until the next event)",
+    )
+    parser.add_argument(
         "--show",
         action="store_true",
         help="Display the plot interactively instead of saving it",
@@ -178,7 +211,7 @@ def main() -> None:
         raise SystemExit(f"Log file '{args.log}' does not exist")
 
     events = load_events(args.log)
-    plot_timeline(events, args.output, show=args.show)
+    plot_timeline(events, args.output, pulse_width=args.pulse_width, show=args.show)
 
 
 if __name__ == "__main__":

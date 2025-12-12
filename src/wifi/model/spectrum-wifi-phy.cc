@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <cmath>
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT WIFI_PHY_NS_LOG_APPEND_CONTEXT(Ptr(this, false))
